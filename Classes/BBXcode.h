@@ -13,6 +13,13 @@
 @property(readonly) NSRange lineRange;
 @end
 
+@interface DVTTextPreferences : NSObject
++ (id)preferences;
+@property BOOL trimWhitespaceOnlyLines;
+@property BOOL trimTrailingWhitespace;
+@property BOOL useSyntaxAwareIndenting;
+@end
+
 @interface DVTSourceTextStorage : NSTextStorage
 - (void)replaceCharactersInRange:(NSRange)range withString:(NSString *)string withUndoManager:(id)undoManager;
 - (NSRange)lineRangeForCharacterRange:(NSRange)range;
@@ -52,15 +59,14 @@
 - (NSUndoManager *)undoManager;
 @end
 
-@interface DVTSourceTextView : NSTextView
-- (void)indentSelectionIfIndentable:(id)sender;
-- (void)indentSelection:(id)sender;
+@interface IDESourceCodeComparisonEditor : NSObject
+@property(readonly) NSTextView *keyTextView;
+@property(retain) NSDocument *primaryDocument;
 @end
 
 @interface IDESourceCodeEditor : NSObject
 @property(retain) DVTSourceTextView *textView;
 - (IDESourceCodeDocument *)sourceCodeDocument;
-- (NSArray *)currentSelectedDocumentLocations; // DVTTextDocumentLocation objects
 @end
 
 @interface IDEEditorContext : NSObject
@@ -77,7 +83,8 @@
 @end
 
 @interface BBXcode : NSObject
-+ (id)currentEditor;
++ (IDESourceCodeDocument *)currentSourceCodeDocument;
++ (NSTextView *)currentSourceCodeTextView;
 + (NSArray *)selectedObjCFileNavigableItems;
 + (BOOL)uncrustifyCodeOfDocument:(IDESourceCodeDocument *)document;
 + (BOOL)uncrustifyCodeAtRanges:(NSArray *)ranges document:(IDESourceCodeDocument *)document reindent:(BOOL)reindent;
