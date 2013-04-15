@@ -16,9 +16,10 @@
 #pragma mark - Setup and Teardown
 
 + (void)pluginDidLoad:(NSBundle *)plugin {
+    static BBUncrustifyPlugin *uncrustifyPlugin;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        [[self alloc] init];
+        uncrustifyPlugin = [[self alloc] init];
     });
 }
 
