@@ -11,13 +11,13 @@
 
 NSArray *BBMergeContinuousRanges(NSArray* ranges) {
     if (ranges.count == 0) return nil;
-    
+
     NSMutableIndexSet *mIndexes = [NSMutableIndexSet indexSet];
     for (NSValue *rangeValue in ranges) {
         NSRange range = [rangeValue rangeValue];
         [mIndexes addIndexesInRange:range];
     }
-    
+
     NSMutableArray *mergedRanges = [NSMutableArray array];
     [mIndexes enumerateRangesUsingBlock:^(NSRange range, BOOL *stop) {
         [mergedRanges addObject:[NSValue valueWithRange:range]];
@@ -51,7 +51,7 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
         IDESourceCodeEditor *editor = [BBXcode currentEditor];
         return editor.sourceCodeDocument;
     }
-    
+
     if ([[BBXcode currentEditor] isKindOfClass:NSClassFromString(@"IDESourceCodeComparisonEditor")]) {
         IDESourceCodeComparisonEditor *editor = [BBXcode currentEditor];
         if ([[editor primaryDocument] isKindOfClass:NSClassFromString(@"IDESourceCodeDocument")]) {
@@ -59,7 +59,7 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
             return document;
         }
     }
-    
+
     return nil;
 }
 
@@ -68,25 +68,25 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
         IDESourceCodeEditor *editor = [BBXcode currentEditor];
         return editor.textView;
     }
-    
+
     if ([[BBXcode currentEditor] isKindOfClass:NSClassFromString(@"IDESourceCodeComparisonEditor")]) {
         IDESourceCodeComparisonEditor *editor = [BBXcode currentEditor];
         return editor.keyTextView;
     }
-    
+
     return nil;
 }
 
 + (NSArray *)selectedObjCFileNavigableItems {
     NSMutableArray *mutableArray = [NSMutableArray array];
-    
+
     id currentWindowController = [[NSApp keyWindow] windowController];
     if ([currentWindowController isKindOfClass:NSClassFromString(@"IDEWorkspaceWindowController")]) {
         IDEWorkspaceWindowController *workspaceController = currentWindowController;
         IDEWorkspaceTabController *workspaceTabController = [workspaceController activeWorkspaceTabController];
         IDENavigatorArea *navigatorArea = [workspaceTabController navigatorArea];
         id currentNavigator = [navigatorArea currentNavigator];
-        
+
         if ([currentNavigator isKindOfClass:NSClassFromString(@"IDEStructureNavigator")]) {
             IDEStructureNavigator *structureNavigator = currentNavigator;
             for (id selectedObject in structureNavigator.selectedObjects) {
@@ -100,7 +100,7 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
             }
         }
     }
-    
+
     if (mutableArray.count) {
         return [NSArray arrayWithArray:mutableArray];
     }
@@ -119,16 +119,16 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
         }
         [BBXcode normalizeCodeAtRange:NSMakeRange(0, textStorage.string.length) document:document];
     }
-    
+
     BOOL codeHasChanged = (originalString && ![originalString isEqualToString:textStorage.string]);
     return codeHasChanged;
 }
 
-+ (BOOL)uncrustifyCodeAtRanges:(NSArray *)ranges document:(IDESourceCodeDocument *)document reindent:(BOOL)reindent {
++ (BOOL)uncrustifyCodeAtRanges:(NSArray *)ranges document:(IDESourceCodeDocument *)document {
     BOOL uncrustified = NO;
-    
+
     DVTSourceTextStorage *textStorage = [document textStorage];
-    
+
     NSArray *linesRangeValues = nil;
     {
         NSMutableArray *mLinesRangeValues = [NSMutableArray array];
@@ -139,9 +139,9 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
         }
         linesRangeValues = BBMergeContinuousRanges(mLinesRangeValues);
     }
-    
+
     NSMutableArray *textFragments = [NSMutableArray array];
-    
+
     for (NSValue *linesRangeValue in linesRangeValues) {
         NSRange linesRange = [linesRangeValue rangeValue];
         NSRange characterRange = [textStorage characterRangeForLineRange:linesRange];
@@ -155,18 +155,18 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
             }
         }
     }
-    
+
     NSString *originalString = textStorage.string;
-    
+
     NSMutableArray *newSelectionRanges = [NSMutableArray array];
-    
+
     [textFragments enumerateObjectsWithOptions:NSEnumerationReverse usingBlock:^(NSDictionary *textFragment, NSUInteger idx, BOOL *stop) {
         NSRange range = [textFragment[@"range"] rangeValue];
         NSString *newString = textFragment[@"textFragment"];
         [textStorage beginEditing];
         [textStorage replaceCharactersInRange:range withString:newString withUndoManager:[document undoManager]];
         [BBXcode normalizeCodeAtRange:NSMakeRange(range.location, newString.length) document:document];
-        
+
         // If more than one selection update previous range.locations by adding changeInLength
         if (newSelectionRanges.count > 0) {
             NSUInteger i = 0;
@@ -177,18 +177,18 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
                 i++;
             }
         }
-        
+
         NSRange editedRange = [textStorage editedRange];
         if (editedRange.location != NSNotFound) {
             [newSelectionRanges addObject:[NSValue valueWithRange:editedRange]];
         }
         [textStorage endEditing];
     }];
-    
+
     if (newSelectionRanges.count > 0) {
         [[BBXcode currentSourceCodeTextView] setSelectedRanges:newSelectionRanges];
     }
-    
+
     BOOL codeHasChanged = (![originalString isEqualToString:textStorage.string]);
     return codeHasChanged;
 }
@@ -197,19 +197,19 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
 
 + (void)normalizeCodeAtRange:(NSRange)range document:(IDESourceCodeDocument *)document {
     DVTSourceTextStorage *textStorage = [document textStorage];
-    
+
     const NSRange scopeLineRange = [textStorage lineRangeForCharacterRange:range]; // the line range stays unchanged during the normalization
-    
+
     NSRange characterRange = [textStorage characterRangeForLineRange:scopeLineRange];
-    
+
     DVTTextPreferences *preferences = [DVTTextPreferences preferences];
-    
+
     if (preferences.useSyntaxAwareIndenting) {
         // PS: The method [DVTSourceTextStorage indentCharacterRange:undoManager:] always indents empty lines to the same level as code (ignoring the preferences in Xcode concerning the identation of whitespace only lines).
         [textStorage indentCharacterRange:characterRange undoManager:[document undoManager]];
         characterRange = [textStorage characterRangeForLineRange:scopeLineRange];
     }
-    
+
     if (preferences.trimTrailingWhitespace) {
         BOOL trimTrailingWhitespace = preferences.trimTrailingWhitespace;
         BOOL trimWhitespaceOnlyLines = trimTrailingWhitespace && preferences.trimWhitespaceOnlyLines; // only enabled in Xcode preferences if trimTrailingWhitespace is enabled
@@ -220,27 +220,27 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
 }
 
 + (NSString *)stringByTrimmingString:(NSString *)string trimWhitespaceOnlyLines:(BOOL)trimWhitespaceOnlyLines trimTrailingWhitespace:(BOOL)trimTrailingWhitespace {
-    
+
     NSMutableString *mResultString = [NSMutableString string];
-    
+
     // I'm not using [NSString enumerateLinesUsingBlock:] to enumerate the string by lines because the last line of the string is ignored if it's an empty line.
     NSArray *lines = [string componentsSeparatedByString:@"\n"];
-    
+
     NSCharacterSet * characterSet = [NSCharacterSet whitespaceCharacterSet]; // [NSCharacterSet whitespaceCharacterSet] means tabs or spaces
-    
+
     [lines enumerateObjectsWithOptions:0 usingBlock:^(NSString *line, NSUInteger idx, BOOL *stop) {
         if (idx > 0) {
             [mResultString appendString:@"\n"];
         }
-        
+
         BOOL acceptedLine = YES;
-        
+
         NSString *trimSubstring = [line stringByTrimmingCharactersInSet:characterSet];
-        
+
         if (trimWhitespaceOnlyLines) {
             acceptedLine = (trimSubstring.length > 0);
         }
-        
+
         if (acceptedLine) {
             if (trimTrailingWhitespace && trimSubstring.length > 0) {
                 line = BBStringByTrimmingTrailingCharactersFromString(line, characterSet);
@@ -248,7 +248,7 @@ NSString * BBStringByTrimmingTrailingCharactersFromString(NSString *string, NSCh
             [mResultString appendString:line];
         }
     }];
-    
+
     return [NSString stringWithString:mResultString];
 }
 

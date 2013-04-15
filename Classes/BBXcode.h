@@ -65,7 +65,7 @@
 @end
 
 @interface IDESourceCodeEditor : NSObject
-@property(retain) DVTSourceTextView *textView;
+@property(retain) NSTextView *textView;
 - (IDESourceCodeDocument *)sourceCodeDocument;
 @end
 
@@ -87,5 +87,5 @@
 + (NSTextView *)currentSourceCodeTextView;
 + (NSArray *)selectedObjCFileNavigableItems;
 + (BOOL)uncrustifyCodeOfDocument:(IDESourceCodeDocument *)document;
-+ (BOOL)uncrustifyCodeAtRanges:(NSArray *)ranges document:(IDESourceCodeDocument *)document reindent:(BOOL)reindent;
++ (BOOL)uncrustifyCodeAtRanges:(NSArray *)ranges document:(IDESourceCodeDocument *)document;
 @end

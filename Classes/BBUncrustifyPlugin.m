@@ -16,11 +16,9 @@
 #pragma mark - Setup and Teardown
 
 + (void)pluginDidLoad:(NSBundle *)plugin {
-    static BBUncrustifyPlugin *uncrustifyPlugin = nil;
-    
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        uncrustifyPlugin = [[self alloc] init];
+        [[self alloc] init];
     });
 }
 
@@ -35,25 +33,21 @@
             menuItem = [[NSMenuItem alloc] initWithTitle:@"Uncrustify Selected Files" action:@selector(uncrustifySelectedFiles:) keyEquivalent:@""];
             [menuItem setTarget:self];
             [[editMenuItem submenu] addItem:menuItem];
-            
+
             menuItem = [[NSMenuItem alloc] initWithTitle:@"Uncrustify Active File" action:@selector(uncrustifyActiveFile:) keyEquivalent:@""];
             [menuItem setTarget:self];
             [[editMenuItem submenu] addItem:menuItem];
-            
-            menuItem = [[NSMenuItem alloc] initWithTitle:@"Uncrustify Selected Lines" action:@selector(uncrustifySelectedLines:) keyEquivalent:@""];
-            [menuItem setTarget:self];
-            [[editMenuItem submenu] addItem:menuItem];
 
-            menuItem = [[NSMenuItem alloc] initWithTitle:@"Uncrustify And Reindent Selected Lines" action:@selector(uncrustifyAndReindentSelectedLines:) keyEquivalent:@""];
+            menuItem = [[NSMenuItem alloc] initWithTitle:@"Uncrustify Selected Lines" action:@selector(uncrustifySelectedLines:) keyEquivalent:@""];
             [menuItem setTarget:self];
             [[editMenuItem submenu] addItem:menuItem];
 
             menuItem = [[NSMenuItem alloc] initWithTitle:@"Open with UncrustifyX" action:@selector(openWithUncrustifyX:) keyEquivalent:@""];
             [menuItem setTarget:self];
             [[editMenuItem submenu] addItem:menuItem];
-            
+
             [BBPluginUpdater sharedUpdater].delegate = self;
-            
+
             NSLog(@"BBUncrustifyPlugin (V%@) loaded",[[[NSBundle bundleForClass:[self class]] infoDictionary] objectForKey:@"CFBundleVersion"]);
         }
     }
@@ -75,7 +69,7 @@
         }
         [IDEDocumentController releaseEditorDocument:document];
     }
-    
+
     [[BBPluginUpdater sharedUpdater] checkForUpdatesIfNeeded];
 }
 
@@ -84,7 +78,7 @@
     if (!document) return;
 
     [BBXcode uncrustifyCodeOfDocument:document];
-    
+
     [[BBPluginUpdater sharedUpdater] checkForUpdatesIfNeeded];
 }
 
@@ -92,42 +86,17 @@
     IDESourceCodeDocument *document = [BBXcode currentSourceCodeDocument];
     NSTextView *textView = [BBXcode currentSourceCodeTextView];
     if (!document || !textView) return;
-    
+
     NSArray *selectedRanges = [textView selectedRanges];
     [BBXcode uncrustifyCodeAtRanges:selectedRanges document:document];
-    
-    [[BBPluginUpdater sharedUpdater] checkForUpdatesIfNeeded];
-}
-
-- (IBAction)uncrustifyAndReindentSelectedLines:(id)sender {
-    if (![[BBXcode currentEditor] isKindOfClass:NSClassFromString(@"IDESourceCodeEditor")]) {
-        return;
-    }
-
-    IDESourceCodeEditor *editor = [BBXcode currentEditor];
-    IDESourceCodeDocument *document = [editor sourceCodeDocument];
-    NSUndoManager *undoManager = [document undoManager];
-
-    [undoManager beginUndoGrouping];
-    
-    NSArray *selectedRanges = [editor.textView selectedRanges];
-    [BBXcode uncrustifyCodeAtRanges:selectedRanges document:document reindent:NO];
-
-    DVTSourceTextView *textView = editor.textView;
-
-    // Let Xcode re-indent the cleaned code
-    [textView selectAll:sender];
-    [textView indentSelection:sender];
-    [textView setSelectedRange:NSMakeRange([[textView string] length], 0)];
-
-    [undoManager endUndoGrouping];
 
     [[BBPluginUpdater sharedUpdater] checkForUpdatesIfNeeded];
 }
+
 
 - (IBAction)openWithUncrustifyX:(id)sender {
     NSURL *appURL = [BBUncrustify uncrustifyXApplicationURL];
-    
+
     NSURL *configurationFileURL = [BBUncrustify configurationFileURL];
     NSURL *builtInConfigurationFileURL = [BBUncrustify builtInConfigurationFileURL];
     if ([configurationFileURL isEqual:builtInConfigurationFileURL]) {
@@ -140,7 +109,7 @@
             configurationFileURL = nil;
         }
     }
-    
+
     if (configurationFileURL) {
         IDESourceCodeDocument *document = [BBXcode currentSourceCodeDocument];
         if (document) {
@@ -153,7 +122,7 @@
         NSDictionary* configuration = @{NSWorkspaceLaunchConfigurationArguments : @[@"-bbuncrustifyplugin", @"-configpath", configurationFileURL.path]};
         [[NSWorkspace sharedWorkspace]launchApplicationAtURL:appURL options:0 configuration:configuration error:nil];
     }
-    
+
     [[BBPluginUpdater sharedUpdater] checkForUpdatesIfNeeded];
 }
 
@@ -168,7 +137,7 @@
         IDESourceCodeDocument *document = [BBXcode currentSourceCodeDocument];
         return (document != nil);
     }
-    else if (([menuItem action] == @selector(uncrustifySelectedLines:)) || ([menuItem action] == @selector(uncrustifyAndReindentSelectedLines:))) {
+    else if ([menuItem action] == @selector(uncrustifySelectedLines:)) {
         BOOL validated = NO;
         IDESourceCodeDocument *document = [BBXcode currentSourceCodeDocument];
         NSTextView *textView = [BBXcode currentSourceCodeTextView];
